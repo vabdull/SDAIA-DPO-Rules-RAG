@@ -1,97 +1,98 @@
-# التوثيق الفني للنظام (Technical Documentation)
+# Technical Documentation: SDAIA DPO Advisor RAG Engine
 
-## نظرة عامة على النظام (System Architecture)
+## 1. System Architecture Overview
 
-يعتمد مشروع **المستشار الذكي لقواعد تعيين مسؤول حماية البيانات الشخصية** على معمارية **RAG (Retrieval-Augmented Generation)** محلية وآمنة 100%، تجمع بين خوارزميات الاسترجاع الهجين المتقدمة للغة العربية والتوليد الذكي عبر نماذج اللغة الكبيرة مفتوحة المصدر.
+The **SDAIA DPO Advisor** is an on-premise, secure **Retrieval-Augmented Generation (RAG)** pipeline designed to provide high-precision legal Q&A over the official Saudi regulation: *«Rules for Appointing a Personal Data Protection Officer (DPO)»*.
 
 ```mermaid
 flowchart TD
-    subgraph Data_Preparation ["1. مرحلة إعداد البيانات والفهرسة"]
-        A["الوثيقة الرسمية الصادرة عن سدايا (PDF/Markdown)"] --> B["التقطيع الهيكلي المبني على المواد القانونية (Semantic Chunking)"]
-        B --> C1["توليد المتجهات الدلالية عبر nomic-embed-text (768d)"]
-        B --> C2["فهرسة المعجم الصرفي وقاموس المرادفات (Arabic BM25)"]
-        C1 --> D1["مصفوفة المتجهات المخزنة مؤقتاً (.pkl cache)"]
-        C2 --> D2["فهرس التردد العكسي والمصطلحات (Inverted Index)"]
+    subgraph Data_Preparation ["1. Data Ingestion & Structured Indexing"]
+        A["Official SDAIA Regulation Document (PDF / Markdown)"] --> B["Context-Aware Legal Chunking (12 Sections)"]
+        B --> C1["Dense Vector Embeddings via nomic-embed-text (768d)"]
+        B --> C2["Arabic Morphological & Lexical Index (Arabic BM25)"]
+        C1 --> D1["Persistent Vector Cache (.pkl)"]
+        C2 --> D2["Inverted Index & Token Frequencies"]
     end
 
-    subgraph Query_Processing ["2. مرحلة معالجة الاستفسار والاسترجاع"]
-        Q["استفسار المستخدم (User Query)"] --> E["التطبيع اللغوي العربي وتجريد الزوائد (Light Stemming)"]
-        E --> F1["توليد متجه السؤال (Query Embedding)"]
-        E --> F2["توسيع الاستعلام بالمرادفات القانونية (Synonym Expansion)"]
-        F1 --> G1["حساب تشابه جيب التمام (Cosine Similarity)"]
+    subgraph Query_Processing ["2. Query Analysis & Hybrid Retrieval"]
+        Q["User Query (Arabic / English)"] --> E["Arabic Normalization & Light Stemming"]
+        E --> F1["Query Dense Embedding Vector"]
+        E --> F2["Legal Synonym & Stem Expansion"]
+        F1 --> G1["Cosine Similarity Matrix Computation"]
         D1 -.-> G1
-        F2 --> G2["حساب درجات المطابقة المعجمية (BM25 Score)"]
+        F2 --> G2["BM25 Scoring with Normalized Term Frequencies"]
         D2 -.-> G2
-        G1 & G2 --> H["الدمج الهجين وإعادة الترتيب (Hybrid Fusion: Dense + Sparse)"]
-        H --> I["اختيار أفضل المواد ذات الصلة (Top-K Chunks)"]
+        G1 & G2 --> H["Weighted Hybrid Fusion: α·Dense + (1-α)·Sparse"]
+        H --> I["Top-K Relevant Legal Articles & Metadata"]
     end
 
-    subgraph Generation ["3. مرحلة التوليد الذكي والبث المباشر"]
-        I --> J["هندسة الأوامر والسياق المرجعي (Prompt Construction with Citations)"]
+    subgraph Generation ["3. Grounded Prompting & Token Streaming"]
+        I --> J["Strict Grounding System Prompt with Article Citations"]
         Q --> J
-        J --> K["نموذج Qwen المحلي عبر Ollama (qwen2.5:7b)"]
-        K --> L["بث الإجابة كلمة بكلمة (Token Streaming) إلى واجهة Streamlit"]
-        I --> M["عرض كروت التوثيق والاستشهاد مع رقم المادة والصفحة"]
+        J --> K["Local Qwen LLM via Ollama (qwen2.5:7b)"]
+        K --> L["Real-time Token Streaming to Streamlit UI"]
+        I --> M["Source Verification Cards (Article, Page, Match %)"]
     end
 ```
 
 ---
 
-## 1. استراتيجية التقطيع الهيكلي (Structured Legal Chunking)
-على عكس التقطيع العشوائي بالأحجام الثابتة (Fixed Character Chunks)، اعتمد المشروع **التقطيع القانوني الموضوعي (Context-Aware Legal Chunking)**:
-- تم تقسيم الوثيقة استناداً إلى الحدود الطبيعية لمواد النظام (Articles & Sections).
-- كل مادة أو قسم يحتفظ بسياقه الكامل، رقم الصفحة، عنوان المادة، ونصوص الفقرات التابعة لها.
-- تجنب انقطاع الجمل أو فصل الشروط عن أحكامها القانونية، مما يضمن دقة استدلال النموذج اللغوي بنسبة 100%.
+## 2. Ingestion & Structured Chunking Strategy
+
+Conventional fixed-size character chunking often breaks legal provisions mid-sentence, detaching stipulations from their governing conditions. To eliminate this issue, we adopted **Context-Aware Legal Chunking**:
+
+- The regulatory text is split strictly along legal boundaries (Articles and Section Headers).
+- Each chunk preserves:
+  - Unique identifier (`id`)
+  - Canonical Article title (`title`, e.g., *«المادة الخامسة: أحوال تعيين مسؤول حماية البيانات الشخصية»*)
+  - Associated document page number (`page`)
+  - Full verbatim legal text (`content`)
+- Chunks average 120–250 words, allowing complete legal context retention while fitting comfortably within the model's high-attention window.
 
 ---
 
-## 2. محرك الاسترجاع الهجين (Hybrid Retrieval Engine)
+## 3. Hybrid Retrieval Engine
 
-### أ. البحث الدلالي بالمتجهات (Dense Vector Embeddings)
-- **النموذج:** `nomic-embed-text` يعمل محلياً عبر خادم Ollama.
-- **الأبعاد:** 768 بُعداً.
-- **التشابه:** يُحسب تشابه جيب التمام (Cosine Similarity) باستخدام مكتبة `numpy` بكفاءة عالية:
-  $$\text{Cosine Similarity} = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\| \|\mathbf{v}\|}$$
-- **التخزين المؤقت:** تُحفظ المتجهات المحسوبة في ملف كاش بصيغة Pickle (`data/cache/embeddings_*.pkl`) لضمان سرعة إقلاع التطبيق في أجزاء من الثانية دون الحاجة لإعادة توليد التضمينات في كل تشغيل.
+Legal inquiries often combine conceptual questions (*"When do I need to appoint someone?"*) with strict statutory terms and numbers (*"Article 5"*, *"National Data Governance Platform"*, *"Sensitive Data"*). We combine dense semantic vectors with an Arabic-adapted BM25 lexical engine.
 
-### ب. البحث المعجمي بالكلمات المفتاحية (Arabic BM25 Retriever)
-نظراً لطبيعة النصوص القانونية التي تحتوي على مصطلحات حاسمة (مثل: "المادة الخامسة"، "منصة حوكمة البيانات الوطنية"، "عقوبات")، تم تطوير محرك **BM25 مخصص للغة العربية** مدمج في الكود بدون مكتبات خارجية ثقيلة:
-1. **التطبيع اللغوي (Text Normalization):**
-   - إزالة علامات التشكيل والتطويل.
-   - توحيد همزات الألف (`أ`, `إ`, `آ` $\rightarrow$ `ا`).
-   - توحيد التاء المربوطة والهاء (`ة` $\rightarrow$ `ه`).
-   - توحيد الياء والألف المقصورة (`ى` $\rightarrow$ `ي`).
-2. **المجرد الصرفي الخفيف (Arabic Light Stemmer):**
-   - نزع السوابق التعريفية وحروف العطف والجر الملتصقة (`الـ`, `للـ`, `و`, `ف`, `ب`, `ك`).
-   - نزع اللواحق الشائعة (`ـات`, `ـون`, `ـين`, `ـها`).
-3. **توسيع المرادفات القانونية (Legal Synonym Expansion):**
-   - ربط المصطلحات المترادفة تلقائياً (مثل: *حالات $\leftrightarrow$ أحوال*، *شروط $\leftrightarrow$ متطلبات*، *مهام $\leftrightarrow$ أدوار*، *إبلاغ $\leftrightarrow$ منصة / تزويد*).
-4. **حساب درجات BM25:**
-   $$\text{Score}(D, Q) = \sum_{i=1}^{N} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}$$
-   - المعاملات: $k_1 = 1.5$ و $b = 0.75$.
+### A. Dense Vector Embeddings
+- **Model:** `nomic-embed-text` hosted locally via Ollama.
+- **Dimensionality:** 768 dimensions.
+- **Metric:** Cosine Similarity computed using vectorized `NumPy`:
+  $$\text{Cosine}(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \cdot \|\mathbf{v}\|_2}$$
+- **Caching Mechanism:** Pre-computed embeddings are serialized to `data/cache/embeddings_nomic-embed-text.pkl`. Subsequent application runs load the embeddings in `< 1ms`.
 
-### ج. الدمج الخطي الموزون (Hybrid Score Fusion)
-يتم دمج درجات البحث الدلالي مع درجات المطابقة المعجمية بالمعادلة التالية:
-$$\text{Final Score} = \alpha \cdot \text{Score}_{\text{Dense}} + (1 - \alpha) \cdot \text{Score}_{\text{BM25}}$$
-- المعامل الافتراضي: $\alpha = 0.65$ (قابل للتعديل عبر شريط التمرير في الواجهة).
+### B. Custom Arabic BM25 Lexical Engine
+To address Arabic's rich morphology without heavy external dependencies, we implemented an in-engine Arabic BM25 retriever:
+1. **Normalization:** Strips diacritics (*Tashkeel*), unifies *Alef* variants (`أ, إ, آ` $\rightarrow$ `ا`), *Taa Marbuta* (`ة` $\rightarrow$ `ه`), and *Alef Maqsura* (`ى` $\rightarrow$ `ي`).
+2. **Light Stemming:** Removes proclitics and prefixes (`الـ`, `للـ`, `و`, `ف`, `ب`, `ك`) and suffixes (`ـات`, `ـون`, `ـين`, `ـها`).
+3. **Legal Synonym Expansion:** Automatically injects statutory synonyms into query tokens:
+   - *حالات (Cases) $\longleftrightarrow$ أحوال (Circumstances)*
+   - *شروط (Conditions) $\longleftrightarrow$ متطلبات (Requirements)*
+   - *واجبات (Duties) $\longleftrightarrow$ مهام (Tasks) $\longleftrightarrow$ أدوار (Roles)*
+   - *إبلاغ (Reporting) $\longleftrightarrow$ تزويد (Furnishing) $\longleftrightarrow$ منصة (Platform)*
+4. **BM25 Formula:**
+   $$\text{Score}(D, Q) = \sum_{q_i \in Q} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}$$
+   with standard calibration parameters $k_1 = 1.5$ and $b = 0.75$.
 
----
-
-## 3. هندسة الأوامر والحد من الهلوسة (Prompt Engineering & Grounding)
-لضمان الدقة القانونية التامة ومنع النموذج من اختلاق معلومات غير واردة في الوثيقة، تم تصميم موجه النظام (System Prompt) بالمعايير التالية:
-- **حصر الإجابة:** الإلزام الصريح بالإجابة حصراً من واقع النصوص المرفقة في السياق.
-- **التوثيق الإلزامي:** فرض ذكر رقم المادة القانونية المستند إليها في بداية كل إجابة.
-- **الاعتراف بالحدود:** إذا لم يتطرق المستند للسؤال، يصرّح النموذج بأمانة بأن الوثيقة لم تتناول هذا الجانب بدلاً من التخمين.
+### C. Hybrid Score Fusion
+The final ranking score balances semantic depth with keyword precision:
+$$\text{Score}_{\text{final}} = \alpha \cdot \text{Score}_{\text{dense}} + (1 - \alpha) \cdot \text{Score}_{\text{sparse}}$$
+Where $\alpha$ defaults to $0.65$ (adjustable in real time via the Streamlit UI).
 
 ---
 
-## 4. نموذج اللغة المحلي (Local LLM via Ollama)
-- **النموذج الافتراضي:** `qwen2.5:7b` من شركة Alibaba Cloud والمعروف بتفوقه الاستثنائي في معالجة وفهم اللغة العربية الفصحى واتباع التعليمات المعقدة.
-- **المرونة:** يدعم التطبيق التبديل الفوري من القائمة الجانبية بين نماذج العائلة (`qwen3.5:4b`, `qwen2.5:14b`, `qwen2.5:1.5b`).
-- **البث اللحظي (Streaming):** استقبال وتدفق التوكنات مباشرة عبر مولد بايثون (`Generator`) وعرضها في واجهة Streamlit لتقليل زمن الاستجابة المحسوس إلى أقل من ثانية واحدة.
+## 4. Prompt Engineering & Anti-Hallucination Guardrails
+
+To prevent hallucination and guarantee adherence to statutory provisions, the system prompt enforces:
+1. **Strict Grounding:** The model is explicitly forbidden from introducing knowledge outside the provided retrieved context.
+2. **Mandatory Citations:** Every assertion must begin with or reference the specific Article (e.g., *"According to Article 4..."*).
+3. **Honest Out-of-Scope Declaration:** If an inquiry cannot be answered from the official text, the model explicitly acknowledges the absence of that provision rather than speculating.
 
 ---
 
-## 5. الخصوصية والأمان (Data Privacy & Compliance)
-- جميع العمليات الحسابية وتوليد المتجهات وتشغيل النماذج تتم **محلياً بنسبة 100% داخل بيئة الجهاز**.
-- لا يتم إرسال أي استفسار أو جزء من البيانات الشخصية إلى واجهات برمجة تطبيقات سحابية خارجية (Zero External API Calls).
+## 5. Local LLM Generation & Token Streaming
+
+- **Default Model:** `qwen2.5:7b` (Alibaba Cloud), renowned for its leading Arabic benchmarks, instruction-following fidelity, and reasoning capabilities.
+- **Inference Runtime:** **Ollama** running locally on `http://localhost:11434`.
+- **Low Latency Streaming:** Employs Python generators consuming Ollama's HTTP streaming response, delivering tokens to Streamlit with sub-second time-to-first-token (TTFT).
