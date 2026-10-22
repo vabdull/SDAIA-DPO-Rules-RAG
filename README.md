@@ -8,6 +8,7 @@
   <img src="https://img.shields.io/badge/Model-Qwen_2.5-6366F1?style=for-the-badge" alt="Qwen" />
   <img src="https://img.shields.io/badge/Embeddings-Nomic_768d-00A389?style=for-the-badge" alt="Nomic" />
   <img src="https://img.shields.io/badge/SDAIA-Academy-00A389?style=for-the-badge" alt="SDAIA Academy" />
+  <img src="https://img.shields.io/badge/Team-Group_5-2563EB?style=for-the-badge" alt="Group 5" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
 </p>
 
@@ -19,6 +20,19 @@ This project was engineered and delivered as an applied capstone project within:
 > **Generative AI Solutions Development Program**  
 > *(برنامج تطوير حلول الذكاء الاصطناعي التوليدي)*  
 > Organized and presented by **[SDAIA Academy](https://github.com/SDAIAAcademy)** — Saudi Data & AI Authority.
+
+---
+
+## 👥 Project Team — Group 5 (فريق العمل - المجموعة 5)
+
+This project was designed, developed, and delivered by **Group 5**:
+
+- 🌟 **Abdullah Alotaibi**
+- 🌟 **Afnan Alharbi**
+- 🌟 **Leena Aljuwaysir**
+- 🌟 **Aljawharah Almutairi**
+- 🌟 **Majed Alsehli**
+- 🌟 **Raid Almousa**
 
 ---
 
@@ -179,9 +193,9 @@ You can ask any question in Arabic or English. Here are verified test questions 
 ---
 
 ## 🤝 Acknowledgments
-
 Special thanks and appreciation to:
-- **[SDAIA Academy](https://github.com/SDAIAAcademy)** and the supervisors of the **Generative AI Solutions Development Program** for their invaluable guidance and academic leadership.
+- **[SDAIA Academy](https://github.com/SDAIAAcademy)** and the instructional team of the **Generative AI Solutions Development Program** for their invaluable guidance, curriculum, and academic leadership.
+- The members of **Group 5** (*Abdullah Alotaibi, Afnan Alharbi, Leena Aljuwaysir, Aljawharah Almutairi, Majed Alsehli, Raid Almousa*) for their teamwork, dedication, and collaborative engineering.
 - The **Saudi Data & AI Authority (SDAIA)** for establishing national regulatory frameworks and empowering the AI ecosystem across the Kingdom.
 - The open-source teams behind **Streamlit**, **Ollama**, and **Qwen** for their cutting-edge tools and models.
 

@@ -271,6 +271,20 @@ with st.sidebar:
         st.session_state.pending_query = None
         st.rerun()
 
+    st.markdown("---")
+    with st.expander("👥 فريق العمل — المجموعة 5 (Group 5)", expanded=False):
+        st.markdown("""
+        **برنامج تطوير حلول الذكاء الاصطناعي التوليدي**  
+        *أكاديمية سدايا (SDAIA Academy)*
+
+        - 🌟 **Abdullah Alotaibi**
+        - 🌟 **Afnan Alharbi**
+        - 🌟 **Leena Aljuwaysir**
+        - 🌟 **Aljawharah Almutairi**
+        - 🌟 **Majed Alsehli**
+        - 🌟 **Raid Almousa**
+        """)
+
 
 # Top Brand Header
 st.markdown("""
@@ -280,10 +294,11 @@ st.markdown("""
             🛡️ المستشار الذكي لقواعد تعيين مسؤول حماية البيانات الشخصية
         </h1>
         <p class="sdaia-subtitle">
-            نظام استرجاع وتوليد ذكي (RAG) يستند إلى وثيقة سدايا الرسمية | مدعوم محلياً بنموذج Qwen و nomic-embed-text
+            نظام استرجاع وتوليد ذكي (RAG) يستند إلى وثيقة سدايا الرسمية | تطوير: المجموعة 5 (Group 5)
         </p>
     </div>
     <div class="sdaia-badges">
+        <span class="sdaia-badge" style="background: rgba(37,99,235,0.35); border-color: rgba(96,165,250,0.5);">المجموعة 5 (Group 5)</span>
         <span class="sdaia-badge">سدايا (SDAIA)</span>
         <span class="sdaia-badge gold">الإصدار 1.0 (أغسطس 2024)</span>
         <span class="sdaia-badge">تصنيف: عام</span>
